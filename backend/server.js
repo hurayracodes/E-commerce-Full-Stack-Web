@@ -1,7 +1,7 @@
 import express from 'express'
 const app = express()
 import dotenv from 'dotenv'
-import database from "./db/dbConnection.js"
+import database from "./config/dbConnection.js"
 import productRoute from "./routes/ProductRoute.js"
 import cors from 'cors'
 
