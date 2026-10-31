@@ -1,4 +1,3 @@
-import { Star } from "lucide-react";
 import { useState } from "react";
 import axios from "axios";
 
@@ -15,14 +14,17 @@ const primaryBtn =
 function CreateProduct() {
   const [CreateProduct, setCreateProduct] = useState({
     title: "",
-    Condition: "",
+    desc: "",
+    category: "",
     price: "",
-    rating: "",
-    img: "",
   });
 
+  const [imageFile, setImageFile] = useState(null); // asli file (backend ko jayegi)
+  const [preview, setPreview] = useState(""); // sirf screen par dikhane ke liye
+  const [fileKey, setFileKey] = useState(0); // submit ke baad file input reset karne ke liye
+  const [errorMsg, setErrorMsg] = useState("");
+
   const ChangeHadler = (evt) => {
-    // console.log(evt.target.value);
     const { name, value } = evt.target;
     setCreateProduct((prevState) => ({
       ...prevState,
@@ -30,33 +32,64 @@ function CreateProduct() {
     }));
   };
 
+  // Local computer se image select karna
+  const ImageHandler = (evt) => {
+    const file = evt.target.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      setErrorMsg("Sirf image file select karein");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMsg("Image 5MB se choti honi chahiye");
+      return;
+    }
+
+    setErrorMsg("");
+    setImageFile(file);
+    setPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e) => {
-    // console.log("kar lo kuch bhi")
     e.preventDefault();
-    // Form submission logic here
-    console.log("Form submitted:", CreateProduct);
-    
+
+    // File bhejne ke liye JSON nahi, FormData chahiye
+    const formData = new FormData();
+    formData.append("title", CreateProduct.title);
+    formData.append("desc", CreateProduct.desc);
+    formData.append("category", CreateProduct.category);
+    formData.append("price", CreateProduct.price);
+    if (imageFile) formData.append("img", imageFile); // "img" backend upload.single("img") se match hona chahiye
+
     try {
-        const url = "http://localhost:3000/api/products";
-      const response = await axios.post(url, CreateProduct);
+      const url = "http://localhost:3000/api/products";
+      // Content-Type khud set mat karna, axios FormData par khud laga deta hai
+      const response = await axios.post(url, formData);
       console.log("Product created successfully:", response.data);
+
+      // Form reset
       setCreateProduct({
         title: "",
-        Condition: "",
+        desc: "",
+        category: "",
         price: "",
-    rating: "",
-        img: "",
       });
+      setImageFile(null);
+      setPreview("");
+      setFileKey((k) => k + 1);
+      setErrorMsg("");
     } catch (error) {
-      console.error("Tera Code main bug hai bhi",error);
-        
-  if (error.response) {
-    console.log("Backend Error:", error.response.data);
-    console.log("Status:", error.response.status);
-  }
+      console.error("Tera Code main bug hai bhi", error);
+      setErrorMsg("Product create nahi hua, dobara try karein");
 
+      if (error.response) {
+        console.log("Backend Error:", error.response.data);
+        console.log("Status:", error.response.status);
+      }
     }
   };
+
   return (
     <section className="relative min-h-screen w-full bg-gray-900">
       {/* Background + bubbles (fixed: scroll par bhi poori screen cover karta hai) */}
@@ -81,18 +114,29 @@ function CreateProduct() {
             <div className="max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-white/80 shadow-xl backdrop-blur-sm">
               <div className="flex aspect-[4/3] items-center justify-center bg-gray-100">
                 <img
-                  src="https://images.pexels.com/photos/33272308/pexels-photo-33272308.jpeg"
+                  src={
+                    preview ||
+                    "https://images.pexels.com/photos/33272308/pexels-photo-33272308.jpeg"
+                  }
                   alt=""
                   className="h-full w-full object-cover"
                 />
               </div>
               <div className="space-y-1 p-4">
-                <h3 className="truncate font-semibold text-gray-900"></h3>
-                <p className="line-clamp-2 text-sm text-gray-500"></p>
+                <h3 className="truncate font-semibold text-gray-900">
+                  {CreateProduct.title}
+                </h3>
+                <p className="line-clamp-2 text-sm text-gray-500">
+                  {CreateProduct.desc}
+                </p>
+                {CreateProduct.category && (
+                  <p className="text-xs font-medium text-gray-600">
+                    {CreateProduct.category}
+                  </p>
+                )}
                 <div className="flex items-center justify-between pt-2">
-                  <span className="font-bold text-indigo-600"></span>
-                  <span className="flex items-center gap-1 text-sm text-gray-500">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                  <span className="font-bold text-indigo-600">
+                    {CreateProduct.price && `Rs. ${CreateProduct.price}`}
                   </span>
                 </div>
               </div>
@@ -105,12 +149,7 @@ function CreateProduct() {
 
           {/* Right: form (chota: max-w-md) */}
           <div className="w-full max-w-md rounded-lg bg-[#a7cb12] p-5 shadow-xl md:p-6 lg:justify-self-end">
-            <form
-              className="space-y-4"
-              onSubmit={(e) => {
-                handleSubmit(e);
-              }}
-            >
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
                 <label htmlFor="title" className={labelClass}>
                   Title
@@ -126,13 +165,35 @@ function CreateProduct() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="Condition" className={labelClass}>
-                  Condition
+                <label htmlFor="category" className={labelClass}>
+                  Category
+                </label>
+                <select
+                  id="category"
+                  name="category"
+                  value={CreateProduct.category}
+                  onChange={ChangeHadler}
+                  className={inputClass}
+                >
+                  <option value="" disabled>
+                    Select Category
+                  </option>
+                  <option value="Clothes">Clothes</option>
+                  <option value="Tech">Tech</option>
+                  <option value="Shoes">Shoes</option>
+                  <option value="Watches">Watches</option>
+                  <option value="Others">Others</option>
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="desc" className={labelClass}>
+                  Description
                 </label>
                 <textarea
-                  id="Condition"
-                  name="Condition"
-                  value={CreateProduct.Condition}
+                  id="desc"
+                  name="desc"
+                  value={CreateProduct.desc}
                   onChange={ChangeHadler}
                   rows={3}
                   placeholder="Product ke baare mein likhein..."
@@ -140,58 +201,39 @@ function CreateProduct() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label htmlFor="price" className={labelClass}>
-                    Price
-                  </label>
-                  <input
-                    id="price"
-                    name="price"
-                    type="number"
-                    value={CreateProduct.price}
-                    onChange={ChangeHadler}
-                    min={0}
-                    placeholder="e.g. 1999"
-                    className={inputClass}
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label htmlFor="rating" className={labelClass}>
-                    Rating (optional)
-                  </label>
-                  <input
-                    id="rating"
-                    name="rating"
-                    type="number"
-                    value={CreateProduct.rating}
-                    onChange={ChangeHadler}
-                    min={0}
-                    max={5}
-                    step={0.1}
-                    placeholder="0 - 5"
-                    className={inputClass}
-                  />
-                </div>
+              <div className="space-y-1.5">
+                <label htmlFor="price" className={labelClass}>
+                  Price
+                </label>
+                <input
+                  id="price"
+                  name="price"
+                  type="number"
+                  value={CreateProduct.price}
+                  onChange={ChangeHadler}
+                  min={0}
+                  placeholder="e.g. 1999"
+                  className={inputClass}
+                />
               </div>
 
               <div className="space-y-1.5">
                 <label htmlFor="img" className={labelClass}>
-                  Image URL
+                  Product Image
                 </label>
                 <input
+                  key={fileKey}
                   id="img"
                   name="img"
-                  type="url"
-                  value={CreateProduct.img}
-                  onChange={ChangeHadler}
-                  placeholder="https://..."
-                  className={inputClass}
+                  type="file"
+                  accept="image/*"
+                  onChange={ImageHandler}
+                  className={`${inputClass} cursor-pointer file:mr-3 file:rounded file:border-0 file:bg-[#1d2a02] file:px-3 file:py-1 file:text-sm file:font-semibold file:text-[#d9f542]`}
                 />
 
-                <p className="text-xs font-medium text-red-800">
-                  Image load nahi hui, URL check karein
-                </p>
+                {errorMsg && (
+                  <p className="text-xs font-medium text-red-800">{errorMsg}</p>
+                )}
               </div>
 
               <button type="submit" className={`${primaryBtn} w-full`}>

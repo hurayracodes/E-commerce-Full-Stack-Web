@@ -6,9 +6,14 @@ const productSchema = new Schema({
     type:String,
     required:[true, "Title tu hona chahiya bhi"]
   },
-  Condition:{
+  desc:{
     type:String,
-    required:[true, "Condition tu hona chahiya bhi"]
+    required:[true, "Description tu hona chahiya bhi"]
+  },
+  category:{
+    type:String,
+    enum: ["Clothes", "Tech", "Shoes", "Watches", "Others"],
+    required:[true, "Category tu hona chahiya bhi"]
   },
   price:{
     type:Number,
@@ -22,7 +27,8 @@ const productSchema = new Schema({
   img:{
     type:String,
     required:[true, "image is also required bhi"]
-  }
-});
+  },
+  
+},{timestamps:true});
 
 export default mongoose.model('Product', productSchema);

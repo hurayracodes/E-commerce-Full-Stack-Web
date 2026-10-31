@@ -8,7 +8,8 @@ import Product from './pages/Product';
 import Contact from './pages/Contact';
 import Cart from './pages/Cart';
 import Collection from './pages/Collection';
-import CreateProduct from './components/adminUi/CreateProduct';
+import CreateProduct from './admin/CreateProduct';
+import ProductList from './components/HomeUi/ProductList';
 function App() {
   return (
     <div>
@@ -19,6 +20,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Home />} />
             <Route path="/create-product" element={<CreateProduct />} />
+            <Route path="/admin/product-list" element={<ProductList />} />
             <Route path="/about" element={<About />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/product/:productId" element={<Product />} />
