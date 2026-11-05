@@ -6,6 +6,14 @@ const productSchema = new Schema({
     type:String,
     required:[true, "Title tu hona chahiya bhi"]
   },
+  size:{
+    type:String,
+    enum: ["S", "M", "L", "XL", "XXL",41,42,43],
+  },
+  stock:{
+    type:Number,
+    required:[true, "Stock tu hona chahiya bhi"]
+  },
   desc:{
     type:String,
     required:[true, "Description tu hona chahiya bhi"]
@@ -19,14 +27,20 @@ const productSchema = new Schema({
     type:Number,
     required:[true, "Price tu hona chahiya bhi"]
   },
+  condition: {
+  type: String,
+  enum: ["New", "Like New", "Used"],
+  default: "New",
+},
   rating:{
     type:Number,
     min: 0,
     max: 5
   },
   img:{
-    type:String,
-    required:[true, "image is also required bhi"]
+    type:[String],
+    required:[true, "image is also required bhi"],
+    default: []
   },
   
 },{timestamps:true});

@@ -1,380 +1,172 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { ShoppingBag, Check } from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import {
+  ShoppingBag,
+  Check,
+  Star,
+  Search,
+  LayoutGrid,
+  Shirt,
+  Laptop,
+  Footprints,
+  Watch,
+  Package,
+  SearchX,
+} from "lucide-react";
 
-const ACCENT = "#d1fe17";
-const API_URL = "http://localhost:3000/api/products";
-const MIN_CARDS = 10; // ring poora bharne ke liye kam az kam itne cards
+const LIME = "#C5F24E";
+const INK = "#10140a";
+const BASE_URL = "http://localhost:3000";
+const API_URL = `${BASE_URL}/api/products`;
 
-/* ------------------------------------------------------------------ */
-/*  Round Carousel (aap ka design)                                     */
-/*  - Hover par rotation ruk jati hai aur "Add to cart" button aata hai */
-/* ------------------------------------------------------------------ */
-export function RoundCarousel({
-  items = [],
-  cardWidth = 260,
-  cardHeight = 340,
-  spacing = 3,
-  speed = 2,
-  direction = "right",
-  drag = true,
-  sensitivity = 5,
-  tilt = -7,
-  perspective = 3000,
-  cornerRadius = 22,
-  innerDim = 3.5,
-  background = "#000000",
-  onAddToCart,
-  style = {},
-}) {
-  const count = items.length;
+const CATEGORIES = [
+  { name: "All", icon: LayoutGrid },
+  { name: "Clothes", icon: Shirt },
+  { name: "Tech", icon: Laptop },
+  { name: "Shoes", icon: Footprints },
+  { name: "Watches", icon: Watch },
+  { name: "Others", icon: Package },
+];
 
-  const ringRef = useRef(null);
-  const rafRef = useRef(0);
-  const rotYRef = useRef(0);
-  const velRef = useRef(0);
-  const lastRef = useRef(0);
-  const speedFactorRef = useRef(1); // 1 = chal raha hai, 0 = ruka hua
-  const hoverRef = useRef(null);
-  const dragRef = useRef({ pressed: false, active: false, x: 0, startX: 0 });
-  const addedTimer = useRef(0);
+// Image: full URL ho to waisi hi, warna backend ke /uploads se
+const imgSrc = (img) => {
+  // Array ho to first image select karo
+  const image = Array.isArray(img) ? img[0] : img;
 
-  const [hovered, setHovered] = useState(null); // index of hovered/selected card
-  const [added, setAdded] = useState(null); // index of card jisme abhi add hua
+  if (typeof image !== "string" || !image.trim()) {
+    return "";
+  }
 
-  const angle = count ? 360 / count : 0;
-  const factor = 1 + spacing * 0.15;
-  const radius =
-    count > 1 ? (cardWidth * factor) / (2 * Math.tan(Math.PI / count)) : 0;
-  const degPerSec = speed * 6 * (direction === "left" ? -1 : 1);
+  // Complete URL
+  if (/^(https?:|data:|blob:)/i.test(image)) {
+    return image;
+  }
 
-  const setHover = (i) => {
-    hoverRef.current = i;
-    setHovered(i);
-  };
+  // Backend upload path
+  if (image.startsWith("/")) {
+    return BASE_URL + image;
+  }
 
-  useEffect(() => () => clearTimeout(addedTimer.current), []);
+  return `${BASE_URL}/uploads/${image}`;
+};
 
-  useEffect(() => {
-    const ring = ringRef.current;
-    if (!ring || !count) return;
+const norm = (s) => String(s ?? "").trim().toLowerCase();
 
-    const apply = () => {
-      ring.style.transform = `translateZ(${-radius}px) rotateY(${rotYRef.current}deg)`;
-    };
-    apply();
+/* ------------------------------ Card ------------------------------ */
+function ProductCard({ product, onAddToCart }) {
+  const [added, setAdded] = useState(false);
+  const navigate = useNavigate();
 
-    const draw = (now) => {
-      const dt = lastRef.current ? (now - lastRef.current) / 1000 : 0;
-      lastRef.current = now;
-      const f = Math.min(dt, 0.1);
+  const image = product.images?.[0] || product.img; // naye: images[], purane: img
+  const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;
+  const outOfStock =
+    product.stock !== undefined && product.stock !== null && Number(product.stock) <= 0;
 
-      // hover par smoothly ruk jao, hat jane par wapas chalo
-      const target = hoverRef.current !== null ? 0 : 1;
-      speedFactorRef.current +=
-        (target - speedFactorRef.current) * Math.min(1, f * 10);
-
-      if (!dragRef.current.active) {
-        if (Math.abs(velRef.current) > 0.01) {
-          rotYRef.current += velRef.current * f;
-          velRef.current *= hoverRef.current !== null ? 0.8 : 0.94;
-        } else {
-          rotYRef.current += degPerSec * f * speedFactorRef.current;
-        }
-      }
-      apply();
-      rafRef.current = requestAnimationFrame(draw);
-    };
-    rafRef.current = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(rafRef.current);
-  }, [radius, degPerSec, count]);
-
-  /* ---------- drag (button par click kharab na ho is liye capture tab hota hai jab sach mein drag ho) ---------- */
-  const onPointerDown = (e) => {
-    if (!drag || e.target.closest("[data-no-drag]")) return;
-    dragRef.current = {
-      pressed: true,
-      active: false,
-      x: e.clientX,
-      startX: e.clientX,
-    };
-    velRef.current = 0;
-  };
-  const onPointerMove = (e) => {
-    const d = dragRef.current;
-    if (!d.pressed) return;
-    if (!d.active) {
-      if (Math.abs(e.clientX - d.startX) < 5) return;
-      d.active = true;
-      d.x = e.clientX;
-      e.currentTarget.setPointerCapture?.(e.pointerId);
+  const handleAdd = () => {
+    if (outOfStock) return;
+    // size wale product ke liye pehle size choose karna zaroori hai
+    if (hasSizes) {
+      navigate(`/product/${product._id || product.id}`);
+      return;
     }
-    const dx = e.clientX - d.x;
-    d.x = e.clientX;
-    const k = 0.3 * sensitivity;
-    rotYRef.current += dx * k;
-    velRef.current = dx * k * 60;
-  };
-  const onPointerUp = (e) => {
-    if (dragRef.current.active)
-      e.currentTarget.releasePointerCapture?.(e.pointerId);
-    dragRef.current = { pressed: false, active: false, x: 0, startX: 0 };
-  };
-
-  const handleAdd = (e, item, i) => {
-    e.stopPropagation();
-    onAddToCart?.(item);
-    setAdded(i);
-    clearTimeout(addedTimer.current);
-    addedTimer.current = setTimeout(() => setAdded(null), 1600);
-  };
-
-  const faceBase = {
-    position: "absolute",
-    inset: 0,
-    borderRadius: cornerRadius,
-    overflow: "hidden",
-    backfaceVisibility: "hidden",
+    onAddToCart?.(product);
+    setAdded(true);
+    setTimeout(() => setAdded(false), 1500);
   };
 
   return (
-    <div
-      style={{
-        ...style,
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        overflow: "hidden",
-        background,
-        perspective: `${perspective}px`,
-        cursor: drag ? "grab" : "default",
-        touchAction: "pan-y",
-        userSelect: "none",
-      }}
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={onPointerUp}
-      // touch par: card ke bahar tap karo to selection khatam
-      onClick={(e) => {
-        if (!e.target.closest("[data-card]")) setHover(null);
-      }}
+    <motion.article
+      layout
+      initial={{ opacity: 0, scale: 0.94 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.94 }}
+      transition={{ duration: 0.25 }}
+      className="group flex flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white transition-shadow hover:shadow-xl"
     >
-      <div
-        style={{
-          transformStyle: "preserve-3d",
-          transform: `rotateX(${tilt}deg)`,
-        }}
+      <Link
+        to={`/product/${product._id || product.id}`}
+        className="relative block aspect-[4/3] overflow-hidden bg-neutral-100"
       >
-        <div
-          ref={ringRef}
-          style={{
-            position: "relative",
-            width: cardWidth,
-            height: cardHeight,
-            transformStyle: "preserve-3d",
-          }}
+        {image ? (
+          <img
+            src={imgSrc(image)}
+            alt={product.title}
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110"
+          />
+        ) : (
+          <div className="grid h-full w-full place-items-center text-neutral-300">
+            <Package className="h-10 w-10" />
+          </div>
+        )}
+        <span
+          className="absolute left-3 top-3 rounded-full px-3 py-1 text-[11px] font-bold"
+          style={{ background: LIME, color: INK }}
         >
-          {items.map((item, i) => {
-            const src = item.img || item.src;
-            const isHovered = hovered === i;
-            const isAdded = added === i;
+          {product.category || "Others"}
+        </span>
+        <span
+          className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-bold shadow-sm backdrop-blur"
+          style={{ color: INK }}
+        >
+          <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+          {Number(product.rating || 0).toFixed(1)}
+        </span>
+        <span
+          className="absolute bottom-3 left-3 rounded-full bg-white/90 px-3 py-1 text-[11px] font-bold shadow-sm backdrop-blur"
+          style={{ color: INK }}
+        >
+          {product.condition || product.Condition || "New"}
+        </span>
+        {outOfStock && (
+          <span className="absolute inset-0 grid place-items-center bg-white/70 text-sm font-black text-red-600">
+            Out of stock
+          </span>
+        )}
+      </Link>
 
-            return (
-              <div
-                key={i}
-                style={{
-                  position: "absolute",
-                  inset: 0,
-                  transform: `rotateY(${i * angle}deg) translateZ(${radius}px)`,
-                  transformStyle: "preserve-3d",
-                }}
-              >
-                {/* ---------- Front face (product card) ---------- */}
-                <div
-                  data-card
-                  onPointerEnter={(e) =>
-                    e.pointerType === "mouse" && setHover(i)
-                  }
-                  onPointerLeave={(e) =>
-                    e.pointerType === "mouse" && setHover(null)
-                  }
-                  onClick={() => setHover(i)}
-                  style={{
-                    ...faceBase,
-                    backgroundColor: "#222",
-                    boxShadow: isHovered
-                      ? `0 18px 50px rgba(0,0,0,0.6), 0 0 0 1.5px ${ACCENT}`
-                      : "0 10px 30px rgba(0,0,0,0.35)",
-                    transform: isHovered ? "translateZ(26px)" : "translateZ(0)",
-                    transition: "transform .35s ease, box-shadow .35s ease",
-                  }}
-                >
-                  {src && (
-                    <img
-                      src={src}
-                      alt={item.title || "Product"}
-                      draggable={false}
-                      style={{
-                        position: "absolute",
-                        inset: 0,
-                        width: "100%",
-                        height: "100%",
-                        objectFit: "cover",
-                        transform: isHovered ? "scale(1.06)" : "scale(1)",
-                        transition: "transform .5s ease",
-                      }}
-                    />
-                  )}
+      <div className="flex flex-1 flex-col gap-2 p-4 text-neutral-900">
+        <Link to={`/product/${product._id || product.id}`}>
+          <h3 className="line-clamp-1 text-base font-extrabold hover:underline">{product.title}</h3>
+        </Link>
+        <p className="line-clamp-2 min-h-[2.5rem] text-sm text-neutral-500">{product.desc}</p>
 
-                  {/* rating */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: 10,
-                      right: 10,
-                      padding: "2px 9px",
-                      borderRadius: 999,
-                      background: "rgba(0,0,0,.65)",
-                      border: `1px solid ${ACCENT}40`,
-                      color: ACCENT,
-                      fontSize: 11,
-                      fontWeight: 600,
-                      backdropFilter: "blur(6px)",
-                    }}
-                  >
-                    ⭐ {item.rating || "4.5"}
-                  </div>
-
-                  {/* bottom info */}
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      padding: "44px 14px 14px",
-                      background:
-                        "linear-gradient(to top, rgba(0,0,0,.92) 25%, rgba(0,0,0,.55) 65%, transparent)",
-                      color: "#fff",
-                    }}
-                  >
-                    <h3
-                      style={{
-                        margin: 0,
-                        fontSize: 14,
-                        fontWeight: 600,
-                        lineHeight: 1.3,
-                        display: "-webkit-box",
-                        WebkitLineClamp: 2,
-                        WebkitBoxOrient: "vertical",
-                        overflow: "hidden",
-                      }}
-                    >
-                      {item.title}
-                    </h3>
-
-                    <div
-                      style={{
-                        marginTop: 6,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between",
-                        gap: 8,
-                      }}
-                    >
-                      <span
-                        style={{
-                          padding: "1px 8px",
-                          borderRadius: 999,
-                          border: `1px solid ${ACCENT}40`,
-                          background: `${ACCENT}1a`,
-                          color: ACCENT,
-                          fontSize: 11,
-                          fontWeight: 500,
-                        }}
-                      >
-                        {item.Condition || "New"}
-                      </span>
-                      <span
-                        style={{
-                          color: ACCENT,
-                          fontSize: 15,
-                          fontWeight: 800,
-                          whiteSpace: "nowrap",
-                        }}
-                      >
-                        Rs. {item.price}
-                      </span>
-                    </div>
-
-                    {/* Add to cart: sirf hover / tap par nazar aata hai */}
-                    <button
-                      type="button"
-                      data-no-drag
-                      onClick={(e) => handleAdd(e, item, i)}
-                      tabIndex={isHovered ? 0 : -1}
-                      style={{
-                        marginTop: isHovered ? 12 : 0,
-                        height: isHovered ? 40 : 0,
-                        opacity: isHovered ? 1 : 0,
-                        pointerEvents: isHovered ? "auto" : "none",
-                        width: "100%",
-                        overflow: "hidden",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        gap: 8,
-                        border: "none",
-                        borderRadius: 999,
-                        background: isAdded ? "#fff" : ACCENT,
-                        color: "#10140a",
-                        fontSize: 13,
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        transition: "all .3s ease",
-                      }}
-                    >
-                      {isAdded ? (
-                        <>
-                          <Check size={16} /> Added
-                        </>
-                      ) : (
-                        <>
-                          <ShoppingBag size={16} /> Add to cart
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* ---------- Back face (ring ke andar ka dim nazara) ---------- */}
-                <div
-                  style={{
-                    ...faceBase,
-                    transform: "rotateY(180deg)",
-                    backgroundColor: "#181818",
-                    backgroundImage: src ? `url(${src})` : undefined,
-                    backgroundSize: "cover",
-                    backgroundPosition: "center",
-                    filter: `brightness(${innerDim / 10})`,
-                  }}
-                />
-              </div>
-            );
-          })}
+        <div className="mt-auto flex items-center justify-between pt-2">
+          <span className="text-lg font-black">Rs. {product.price}</span>
+          <motion.button
+            whileTap={{ scale: 0.92 }}
+            onClick={handleAdd}
+            disabled={outOfStock}
+            className="flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-extrabold disabled:cursor-not-allowed disabled:opacity-40"
+            style={{ background: added ? LIME : INK, color: added ? INK : LIME }}
+          >
+            {hasSizes ? (
+              <>
+                <ShoppingBag className="h-4 w-4" /> Select size
+              </>
+            ) : added ? (
+              <>
+                <Check className="h-4 w-4" /> Added
+              </>
+            ) : (
+              <>
+                <ShoppingBag className="h-4 w-4" /> Add
+              </>
+            )}
+          </motion.button>
         </div>
       </div>
-    </div>
+    </motion.article>
   );
 }
 
-/* ------------------------------------------------------------------ */
-/*  Product List (aap ka logic: API se products)                       */
-/* ------------------------------------------------------------------ */
+/* ----------------------------- Page ------------------------------- */
 function ProductList({ onAddToCart }) {
+  const [params, setParams] = useSearchParams();
+  const search = params.get("search") || ""; // navbar search yahin se aata hai
+  const category = params.get("category") || "All";
+
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -387,8 +179,7 @@ function ProductList({ onAddToCart }) {
         if (!cancelled) setProducts(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
         console.error("Error in getting Product", err);
-        if (!cancelled)
-          setError("Products load nahi ho sake. Backend chal raha hai?");
+        if (!cancelled) setError("Products load nahi ho sake. Backend chal raha hai?");
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -398,39 +189,134 @@ function ProductList({ onAddToCart }) {
     };
   }, []);
 
-  // Products kam hon to repeat kar do taake circle poora bhare
-  const carouselItems = useMemo(() => {
-    if (!products.length) return [];
-    const repeats = Math.ceil(MIN_CARDS / products.length);
-    return Array.from({ length: repeats }, () => products).flat();
-  }, [products]);
+  // Har category mein kitne products (search ke hisab se)
+  const counts = useMemo(() => {
+    const q = norm(search);
+    const base = products.filter((p) => !q || norm(p.title).includes(q));
+    const c = { All: base.length };
+    base.forEach((p) => {
+      const k = CATEGORIES.find((x) => norm(x.name) === norm(p.category))?.name || "Others";
+      c[k] = (c[k] || 0) + 1;
+    });
+    return c;
+  }, [products, search]);
+
+  // Search (small/capital dono) + category filter
+  const filtered = useMemo(() => {
+    const q = norm(search);
+    return products.filter((p) => {
+      const matchSearch = !q || norm(p.title).includes(q);
+      const matchCat = category === "All" || norm(p.category) === norm(category);
+      return matchSearch && matchCat;
+    });
+  }, [products, search, category]);
+
+  const setParam = (key, value) => {
+    const next = new URLSearchParams(params);
+    if (value && value !== "All") next.set(key, value);
+    else next.delete(key);
+    setParams(next, { replace: true });
+  };
 
   return (
-    <div
-      style={{ borderTopLeftRadius: "10px", borderTopRightRadius: "70px" }}
-      className="flex min-h-screen flex-col items-center justify-center bg-black p-6 text-white"
-    >
-      <h2
-        className="mb-2 text-center text-2xl font-black tracking-wide"
-        style={{ color: ACCENT }}
-      >
-        Featured Products
-      </h2>
+    <main className="min-h-screen bg-white px-4 py-8 text-neutral-900 sm:px-6 lg:px-10">
+      <div className="mx-auto max-w-7xl">
+        <header className="mb-6">
+          <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Collection</h1>
+          <p className="mt-1 text-sm text-neutral-500">
+            {filtered.length} product{filtered.length !== 1 && "s"}
+            {category !== "All" && ` in ${category}`}
+            {search && ` for “${search}”`}
+          </p>
+        </header>
 
-      {loading && <p className="text-sm text-neutral-400">Loading products…</p>}
-      {!loading && error && <p className="text-sm text-red-400">{error}</p>}
-      {!loading && !error && carouselItems.length === 0 && (
-        <p className="text-sm text-neutral-400">Abhi koi product nahi hai.</p>
-      )}
+        <div className="grid gap-6 lg:grid-cols-[250px_1fr]">
+          {/* ---------- Left: categories ---------- */}
+          <aside className="lg:sticky lg:top-28 lg:self-start">
+            <div className="rounded-3xl border border-neutral-200 bg-neutral-50 p-3 lg:p-4">
+              <p className="mb-3 hidden px-2 text-xs font-bold uppercase tracking-[0.18em] text-neutral-500 lg:block">
+                Categories
+              </p>
 
-      {carouselItems.length > 0 && (
-        <section className="w-full max-w-6xl">
-          <div className="relative h-[560px] w-full">
-            <RoundCarousel items={carouselItems} onAddToCart={onAddToCart} />
-          </div>
-        </section>
-      )}
-    </div>
+              {/* mobile: horizontal scroll, desktop: vertical list */}
+              <div className="flex gap-2 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
+                {CATEGORIES.map(({ name, icon: Icon }) => {
+                  const active = category === name;
+                  return (
+                    <button
+                      key={name}
+                      onClick={() => setParam("category", name)}
+                      className="relative flex shrink-0 items-center justify-between gap-3 rounded-full px-4 py-2.5 text-sm font-bold transition-colors lg:rounded-2xl"
+                      style={{
+                        color: active ? LIME : INK,
+                        background: active ? "transparent" : "#fff",
+                        border: active ? "1px solid transparent" : "1px solid #e5e5e5",
+                      }}
+                    >
+                      {active && (
+                        <motion.span
+                          layoutId="cat-active"
+                          transition={{ type: "spring", stiffness: 420, damping: 32 }}
+                          className="absolute inset-0 rounded-full lg:rounded-2xl"
+                          style={{ background: INK }}
+                        />
+                      )}
+                      <span className="relative flex items-center gap-2.5">
+                        <Icon className="h-4 w-4" />
+                        {name}
+                      </span>
+                      <span
+                        className="relative rounded-full px-2 py-0.5 text-[11px]"
+                        style={
+                          active
+                            ? { background: LIME, color: INK }
+                            : { background: "#f0f0f0", color: INK }
+                        }
+                      >
+                        {counts[name] || 0}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </aside>
+
+          {/* ---------- Right: search + cards ---------- */}
+          <section>
+            {/* page ke andar bhi search (navbar wale se synced) */}
+            <div className="mb-5 flex items-center gap-3 rounded-full border border-neutral-300 bg-white px-4 py-3 focus-within:border-neutral-900">
+              <Search className="h-5 w-5 shrink-0 text-neutral-500" />
+              <input
+                value={search}
+                onChange={(e) => setParam("search", e.target.value)}
+                placeholder="Search by product name…"
+                className="w-full bg-transparent text-sm font-medium outline-none placeholder:text-neutral-400"
+              />
+            </div>
+
+            {loading && <p className="py-20 text-center text-sm text-neutral-500">Loading products…</p>}
+            {!loading && error && <p className="py-20 text-center text-sm text-red-500">{error}</p>}
+
+            {!loading && !error && filtered.length === 0 && (
+              <div className="grid place-items-center gap-3 py-20 text-center">
+                <SearchX className="h-12 w-12 text-neutral-300" />
+                <p className="text-lg font-bold">Koi product nahi mila</p>
+                <p className="text-sm text-neutral-500">Spelling check karein ya category badal kar dekhein.</p>
+              </div>
+            )}
+
+            <motion.div layout className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
+              <AnimatePresence mode="popLayout">
+                {filtered.map((p) => (
+                  <ProductCard key={p._id || p.title} product={p} onAddToCart={onAddToCart} />
+                ))}
+              </AnimatePresence>
+            </motion.div>
+          </section>
+        </div>
+      </div>
+    </main>
   );
 }
 
