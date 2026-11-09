@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import axios from "axios";
 import { Star, ImagePlus, X, Plus } from "lucide-react";
 
-const API_URL = "http://localhost:3000/api/products";
+const API_URL = `${import.meta.env.VITE_API_URL || "http://localhost:3000"}/api/products`;
 const MAX_IMAGES = 6;
 const MAX_SIZE_MB = 5;
 
@@ -39,7 +39,7 @@ function CreateProduct() {
   // page chhodte waqt preview URLs free karo
   useEffect(
     () => () => imagesRef.current.forEach((i) => URL.revokeObjectURL(i.url)),
-    []
+    [],
   );
 
   const ChangeHadler = (e) => {
@@ -95,7 +95,9 @@ function CreateProduct() {
 
   /* ---------------- sizes ---------------- */
   const toggleSize = (s) =>
-    setSizes((prev) => (prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s]));
+    setSizes((prev) =>
+      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
+    );
 
   const addCustomSize = () => {
     const s = customSize.trim();
@@ -110,9 +112,12 @@ function CreateProduct() {
 
     if (!form.title.trim()) return setErrorMsg("Title likhein.");
     if (!form.category) return setErrorMsg("Category select karein.");
-    if (form.price === "" || Number(form.price) < 0) return setErrorMsg("Sahi price likhein.");
-    if (form.stock === "" || Number(form.stock) < 0) return setErrorMsg("Stock (quantity) likhein.");
-    if (!images.length) return setErrorMsg("Kam az kam ek image upload karein.");
+    if (form.price === "" || Number(form.price) < 0)
+      return setErrorMsg("Sahi price likhein.");
+    if (form.stock === "" || Number(form.stock) < 0)
+      return setErrorMsg("Stock (quantity) likhein.");
+    if (!images.length)
+      return setErrorMsg("Kam az kam ek image upload karein.");
 
     const data = new FormData();
     data.append("title", form.title.trim());
@@ -136,7 +141,9 @@ function CreateProduct() {
       alert("Product create ho gaya!");
     } catch (error) {
       console.error("Create product error", error);
-      setErrorMsg(error.response?.data?.error || "Product create nahi ho saka.");
+      setErrorMsg(
+        error.response?.data?.error || "Product create nahi ho saka.",
+      );
     } finally {
       setLoading(false);
     }
@@ -163,7 +170,11 @@ function CreateProduct() {
             <div className="max-w-sm overflow-hidden rounded-xl border border-gray-200 bg-white/90 shadow-xl backdrop-blur-sm">
               <div className="flex aspect-[4/3] items-center justify-center bg-gray-100">
                 {mainPreview ? (
-                  <img src={mainPreview} alt="" className="h-full w-full object-cover" />
+                  <img
+                    src={mainPreview}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 ) : (
                   <span className="text-sm text-gray-400">Image preview</span>
                 )}
@@ -171,7 +182,12 @@ function CreateProduct() {
               {images.length > 1 && (
                 <div className="flex gap-1.5 overflow-x-auto p-2">
                   {images.slice(1).map((i) => (
-                    <img key={i.url} src={i.url} alt="" className="h-10 w-10 rounded object-cover" />
+                    <img
+                      key={i.url}
+                      src={i.url}
+                      alt=""
+                      className="h-10 w-10 rounded object-cover"
+                    />
                   ))}
                 </div>
               )}
@@ -184,7 +200,10 @@ function CreateProduct() {
                 </p>
                 <div className="flex flex-wrap gap-1 pt-1">
                   {sizes.map((s) => (
-                    <span key={s} className="rounded border border-gray-300 px-1.5 text-[11px] text-gray-600">
+                    <span
+                      key={s}
+                      className="rounded border border-gray-300 px-1.5 text-[11px] text-gray-600"
+                    >
                       {s}
                     </span>
                   ))}
@@ -194,8 +213,11 @@ function CreateProduct() {
                     {form.price ? `Rs. ${form.price}` : "Rs. 0"}
                   </span>
                   <span className="flex items-center gap-1 text-sm text-gray-500">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" /> 0.0
-                    <span className="ml-2 text-xs">Stock: {form.stock || 0}</span>
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />{" "}
+                    0.0
+                    <span className="ml-2 text-xs">
+                      Stock: {form.stock || 0}
+                    </span>
                   </span>
                 </div>
               </div>
@@ -210,7 +232,9 @@ function CreateProduct() {
           <div className="w-full max-w-md rounded-lg bg-[#a7cb12] p-5 shadow-xl md:p-6 lg:justify-self-end">
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="space-y-1.5">
-                <label htmlFor="title" className={labelClass}>Title</label>
+                <label htmlFor="title" className={labelClass}>
+                  Title
+                </label>
                 <input
                   id="title"
                   name="title"
@@ -223,7 +247,9 @@ function CreateProduct() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label htmlFor="category" className={labelClass}>Category</label>
+                  <label htmlFor="category" className={labelClass}>
+                    Category
+                  </label>
                   <select
                     id="category"
                     name="category"
@@ -231,7 +257,9 @@ function CreateProduct() {
                     onChange={ChangeHadler}
                     className={inputClass}
                   >
-                    <option value="" disabled>Select Category</option>
+                    <option value="" disabled>
+                      Select Category
+                    </option>
                     <option value="Clothes">Clothes</option>
                     <option value="Tech">Tech</option>
                     <option value="Shoes">Shoes</option>
@@ -240,7 +268,9 @@ function CreateProduct() {
                   </select>
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="condition" className={labelClass}>Condition</label>
+                  <label htmlFor="condition" className={labelClass}>
+                    Condition
+                  </label>
                   <select
                     id="condition"
                     name="condition"
@@ -256,7 +286,9 @@ function CreateProduct() {
               </div>
 
               <div className="space-y-1.5">
-                <label htmlFor="desc" className={labelClass}>Description</label>
+                <label htmlFor="desc" className={labelClass}>
+                  Description
+                </label>
                 <textarea
                   id="desc"
                   name="desc"
@@ -270,7 +302,9 @@ function CreateProduct() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label htmlFor="price" className={labelClass}>Price</label>
+                  <label htmlFor="price" className={labelClass}>
+                    Price
+                  </label>
                   <input
                     id="price"
                     name="price"
@@ -283,7 +317,9 @@ function CreateProduct() {
                   />
                 </div>
                 <div className="space-y-1.5">
-                  <label htmlFor="stock" className={labelClass}>Quantity (stock)</label>
+                  <label htmlFor="stock" className={labelClass}>
+                    Quantity (stock)
+                  </label>
                   <input
                     id="stock"
                     name="stock"
@@ -300,7 +336,8 @@ function CreateProduct() {
               {/* Sizes */}
               <div className="space-y-2">
                 <label className={labelClass}>
-                  Sizes <span className="font-normal opacity-70">(optional)</span>
+                  Sizes{" "}
+                  <span className="font-normal opacity-70">(optional)</span>
                 </label>
                 {[CLOTH_SIZES, SHOE_SIZES].map((group, gi) => (
                   <div key={gi} className="flex flex-wrap gap-1.5">
@@ -336,14 +373,22 @@ function CreateProduct() {
                     placeholder="Custom size (e.g. 32, Free)"
                     className={inputClass}
                   />
-                  <button type="button" onClick={addCustomSize} className={primaryBtn} aria-label="Add size">
+                  <button
+                    type="button"
+                    onClick={addCustomSize}
+                    className={primaryBtn}
+                    aria-label="Add size"
+                  >
                     <Plus className="h-4 w-4" />
                   </button>
                 </div>
                 {/* custom sizes jo presets mein nahi hain */}
                 <div className="flex flex-wrap gap-1.5">
                   {sizes
-                    .filter((s) => !CLOTH_SIZES.includes(s) && !SHOE_SIZES.includes(s))
+                    .filter(
+                      (s) =>
+                        !CLOTH_SIZES.includes(s) && !SHOE_SIZES.includes(s),
+                    )
                     .map((s) => (
                       <button
                         type="button"
@@ -380,7 +425,11 @@ function CreateProduct() {
                         className="h-full w-full"
                         title="Main image banayein"
                       >
-                        <img src={img.url} alt="" className="h-full w-full object-cover" />
+                        <img
+                          src={img.url}
+                          alt=""
+                          className="h-full w-full object-cover"
+                        />
                       </button>
                       {i === 0 && (
                         <span className="absolute bottom-0 left-0 right-0 bg-[#1d2a02] py-0.5 text-center text-[10px] font-bold text-[#d9f542]">
@@ -415,9 +464,15 @@ function CreateProduct() {
                 </div>
               </div>
 
-              {errorMsg && <p className="text-xs font-semibold text-red-800">{errorMsg}</p>}
+              {errorMsg && (
+                <p className="text-xs font-semibold text-red-800">{errorMsg}</p>
+              )}
 
-              <button type="submit" disabled={loading} className={`${primaryBtn} w-full`}>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`${primaryBtn} w-full`}
+              >
                 {loading ? "Uploading…" : "Create Product"}
               </button>
             </form>

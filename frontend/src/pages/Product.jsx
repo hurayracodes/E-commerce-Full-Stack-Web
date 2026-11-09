@@ -19,7 +19,7 @@ import { ShopContext } from "../context/ShopContext";
 
 const LIME = "#C5F24E";
 const INK = "#10140a";
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const API_URL = `${BASE_URL}/api/products`;
 const LOW_STOCK = 5;
 const imgSrc = (img) => {
@@ -41,7 +41,13 @@ const imgSrc = (img) => {
 };
 
 // naye products: images[], purane products: sirf img
-const getImages = (p) => (p?.images?.length ? p.images : p?.img ? [p.img] : []);
+const getImages = (p) => {
+  const fromArray = Array.isArray(p?.images)
+    ? p.images.filter((i) => typeof i === "string" && i.trim())
+    : [];
+  if (fromArray.length) return fromArray;
+  return typeof p?.img === "string" && p.img.trim() ? [p.img] : [];
+};
 const sameId = (p, id) => String(p?._id ?? p?.id) === String(id);
 
 function Product({ onAddToCart }) {

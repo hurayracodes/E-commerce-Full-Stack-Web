@@ -37,12 +37,10 @@ const productSchema = new Schema({
     min: 0,
     max: 5
   },
-  img:{
-    type:[String],
-    required:[true, "image is also required bhi"],
-    default: []
+   images: { type: [String], default: [] }, // NAYI: saari images (Cloudinary URLs)
+    img: { type: [String], default: [] }, // aapka purana field jaisa tha waisa (array) — purane products ke liye
   },
   
-},{timestamps:true});
+{timestamps:true});
 
 export default mongoose.model('Product', productSchema);

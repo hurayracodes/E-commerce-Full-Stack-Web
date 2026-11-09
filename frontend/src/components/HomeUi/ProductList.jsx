@@ -18,7 +18,7 @@ import {
 
 const LIME = "#C5F24E";
 const INK = "#10140a";
-const BASE_URL = "http://localhost:3000";
+const BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const API_URL = `${BASE_URL}/api/products`;
 
 const CATEGORIES = [
@@ -32,23 +32,10 @@ const CATEGORIES = [
 
 // Image: full URL ho to waisi hi, warna backend ke /uploads se
 const imgSrc = (img) => {
-  // Array ho to first image select karo
-  const image = Array.isArray(img) ? img[0] : img;
-
-  if (typeof image !== "string" || !image.trim()) {
-    return "";
-  }
-
-  // Complete URL
-  if (/^(https?:|data:|blob:)/i.test(image)) {
-    return image;
-  }
-
-  // Backend upload path
-  if (image.startsWith("/")) {
-    return BASE_URL + image;
-  }
-
+  const image = Array.isArray(img) ? img[0] : img; // string ya array dono
+  if (typeof image !== "string" || !image.trim()) return "";
+  if (/^(https?:|data:|blob:)/i.test(image)) return image;
+  if (image.startsWith("/")) return BASE_URL + image;
   return `${BASE_URL}/uploads/${image}`;
 };
 
