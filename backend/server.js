@@ -21,7 +21,7 @@ app.use("/api/products", productRoute);
 app.use("/api/orders", orderRoute);
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-
-app.listen(3000, () => {
-  console.log('Server is running on port 3000')
+const PORT = process.env.PORT || 5000
+app.listen(PORT, () => {
+  console.log(`Server is running on port ${PORT}`)
 })

@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
+import { ShopContext } from "../context/ShopContext"; // path apne folder ke hisaab se (HomeUi mein: "../../context/ShopContext")
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShoppingBag,
@@ -45,6 +46,7 @@ const norm = (s) => String(s ?? "").trim().toLowerCase();
 function ProductCard({ product, onAddToCart }) {
   const [added, setAdded] = useState(false);
   const navigate = useNavigate();
+  const ctx = useContext(ShopContext);
 
   const image = product.images?.[0] || product.img; // naye: images[], purane: img
   const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;
@@ -58,7 +60,9 @@ function ProductCard({ product, onAddToCart }) {
       navigate(`/product/${product._id || product.id}`);
       return;
     }
-    onAddToCart?.(product);
+    // parent ne onAddToCart diya ho to wo, warna seedha ShopContext ke cart mein
+    if (typeof onAddToCart === "function") onAddToCart(product);
+    else ctx?.addToCart?.(product._id || product.id, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
