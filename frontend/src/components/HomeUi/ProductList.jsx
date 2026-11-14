@@ -1,7 +1,7 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import axios from "axios";
-import { ShopContext } from "../context/ShopContext"; // path apne folder ke hisaab se (HomeUi mein: "../../context/ShopContext")
+import { ShopContext } from "../../context/ShopContext";
 import { motion, AnimatePresence } from "motion/react";
 import {
   ShoppingBag,
@@ -43,7 +43,7 @@ const imgSrc = (img) => {
 const norm = (s) => String(s ?? "").trim().toLowerCase();
 
 /* ------------------------------ Card ------------------------------ */
-function ProductCard({ product, onAddToCart }) {
+function ProductCard({ product }) {
   const [added, setAdded] = useState(false);
   const navigate = useNavigate();
   const ctx = useContext(ShopContext);
@@ -56,7 +56,6 @@ function ProductCard({ product, onAddToCart }) {
   const handleAdd = () => {
     if (outOfStock) return;
     // size wale product ke liye pehle size choose karna zaroori hai
-    console.log("ADD CLICK", product._id, typeof ctx?.addToCart);
     if (hasSizes) {
       navigate(`/product/${product._id || product.id}`);
       return;
@@ -153,7 +152,7 @@ function ProductCard({ product, onAddToCart }) {
 }
 
 /* ----------------------------- Page ------------------------------- */
-function ProductList({ onAddToCart }) {
+function ProductList() {
   const [params, setParams] = useSearchParams();
   const search = params.get("search") || ""; // navbar search yahin se aata hai
   const category = params.get("category") || "All";
@@ -300,7 +299,7 @@ function ProductList({ onAddToCart }) {
             <motion.div layout className="grid grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-3">
               <AnimatePresence mode="popLayout">
                 {filtered.map((p) => (
-                  <ProductCard key={p._id || p.title} product={p} onAddToCart={onAddToCart} />
+                  <ProductCard key={p._id || p.title} product={p} />
                 ))}
               </AnimatePresence>
             </motion.div>
