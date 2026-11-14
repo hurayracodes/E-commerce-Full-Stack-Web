@@ -25,7 +25,7 @@ import {
 
 const LIME = "#C5F24E";
 const INK = "#10140a";
-const POLL_MS = 15000; // har 15 second mein naye orders check
+const POLL_MS = 5000;
 
 function StatCard({ icon: Icon, label, value, dark }) {
   return (
@@ -85,10 +85,19 @@ function AdminDashboard() {
   useEffect(() => {
     setLoading(true);
     load();
-    const t = setInterval(() => {
-      if (!document.hidden) load(); // tab chhupa ho to bar bar request nahi
+    const poll = setInterval(() => {
+      if (!document.hidden) load();
     }, POLL_MS);
-    return () => clearInterval(t);
+    const refreshWhenVisible = () => {
+      if (!document.hidden) load();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("focus", refreshWhenVisible);
+    return () => {
+      clearInterval(poll);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("focus", refreshWhenVisible);
+    };
   }, [load]);
 
   const changeStatus = async (id, status) => {
@@ -120,7 +129,7 @@ function AdminDashboard() {
           <div>
             <h1 className="text-3xl font-black tracking-tight sm:text-4xl">Admin Dashboard</h1>
             <p className="mt-1 text-sm text-neutral-500">
-              Yahan tamam customers ke orders automatically dikhte hain.
+              Naye orders har 5 seconds mein automatically dikhte hain — browser refresh ki zaroorat nahi.
             </p>
           </div>
           <div className="flex gap-2">
@@ -300,12 +309,19 @@ function AdminDashboard() {
                             Customer & delivery
                           </h3>
                           <div className="rounded-2xl bg-neutral-50 p-3 text-sm">
+                            <p className="text-xs font-bold uppercase tracking-wide text-neutral-500">
+                              Account
+                            </p>
+                            <p className="font-bold">{o.user?.name || "Deleted user"}</p>
+                            {o.user?.email && <p className="text-neutral-600">{o.user.email}</p>}
+                            <p className="mb-2 mt-3 border-t border-neutral-200 pt-2 text-xs font-bold uppercase tracking-wide text-neutral-500">
+                              Delivery
+                            </p>
                             <p className="font-bold">{o.shipping.fullName}</p>
                             <p>{o.shipping.phone}</p>
                             <p className="text-neutral-600">
                               {o.shipping.address}, {o.shipping.city}
                             </p>
-                            {o.user?.email && <p className="mt-1 text-xs text-neutral-500">{o.user.email}</p>}
                             {o.shipping.notes && (
                               <p className="mt-2 text-xs italic text-neutral-600">“{o.shipping.notes}”</p>
                             )}
