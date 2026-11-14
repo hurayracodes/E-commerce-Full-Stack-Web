@@ -56,13 +56,13 @@ function ProductCard({ product, onAddToCart }) {
   const handleAdd = () => {
     if (outOfStock) return;
     // size wale product ke liye pehle size choose karna zaroori hai
+    console.log("ADD CLICK", product._id, typeof ctx?.addToCart);
     if (hasSizes) {
       navigate(`/product/${product._id || product.id}`);
       return;
     }
-    // parent ne onAddToCart diya ho to wo, warna seedha ShopContext ke cart mein
-    if (typeof onAddToCart === "function") onAddToCart(product);
-    else ctx?.addToCart?.(product._id || product.id, 1);
+    // hamesha seedha ShopContext ke cart mein (parent ke onAddToCart prop par depend nahi)
+    ctx?.addToCart?.(product._id || product.id, 1);
     setAdded(true);
     setTimeout(() => setAdded(false), 1500);
   };
