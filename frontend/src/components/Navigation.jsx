@@ -70,7 +70,7 @@ function Navigation() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useContext(AuthContext);
-  const { cartCount } = useContext(ShopContext);
+  const { cartCount, clearCart } = useContext(ShopContext);
 
   // Options menu: admin ko Create Product, logged-in ko Sign out, guest ko Login/Register
   const menuItems = user
@@ -88,7 +88,10 @@ function Navigation() {
   const handleMenuItem = (item) => {
     setMenuOpen(false);
     setMobileOpen(false);
-    if (item.action === "logout") logout();
+    if (item.action === "logout") {
+      clearCart();
+      logout();
+    }
   };
   const [mobileOpen, setMobileOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

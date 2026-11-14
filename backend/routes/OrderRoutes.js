@@ -51,13 +51,18 @@ router.post("/", protect, async (req, res) => {
     // same product + size dobara aaye to jama kar do
     const merged = new Map();
     for (const r of rawItems) {
-      const id = String(r.productId);
+      if (!r || typeof r !== "object" || Array.isArray(r))
+        return res.status(400).json({ error: "Cart mein galat item hai" });
+
+      const id = String(r.productId ?? "");
       const qty = Number(r.qty);
       if (!mongoose.isValidObjectId(id) || !Number.isInteger(qty) || qty < 1 || qty > 99)
         return res.status(400).json({ error: "Cart mein galat item hai" });
       const size = clean(r.size, 20);
       const key = `${id}__${size}`;
-      merged.set(key, { id, size, qty: (merged.get(key)?.qty || 0) + qty });
+      const mergedQty = (merged.get(key)?.qty || 0) + qty;
+      if (mergedQty > 99) return res.status(400).json({ error: "Cart mein galat item hai" });
+      merged.set(key, { id, size, qty: mergedQty });
     }
     const lines = [...merged.values()];
 
