@@ -10,6 +10,7 @@ const productSchema = new Schema({
     type:String,
     enum: ["S", "M", "L", "XL", "XXL",41,42,43],
   },
+    sizes: { type: [String], default: [] },
   stock:{
     type:Number,
     required:[true, "Stock tu hona chahiya bhi"]
@@ -22,6 +23,16 @@ const productSchema = new Schema({
     type:String,
     enum: ["Clothes", "Tech", "Shoes", "Watches", "Others"],
     required:[true, "Category tu hona chahiya bhi"]
+  },
+    discountPercentage:{
+    type:Number,
+    min: [0, "Discount 0 se kam nahi ho sakta"],
+    max: [90, "Discount 90% se zyada nahi ho sakta"],
+    default: 0
+  },
+  saleEndsAt:{
+    type: Date,
+    default: null
   },
   price:{
     type:Number,

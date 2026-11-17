@@ -1,24 +1,40 @@
 import mongoose from "mongoose";
 
-export const ORDER_STATUSES = ["pending", "confirmed", "shipped", "delivered", "cancelled"];
+export const ORDER_STATUSES = [
+  "pending",
+  "confirmed",
+  "shipped",
+  "delivered",
+  "cancelled",
+];
 
 // Order ke waqt product ki copy (title/price/img) save hoti hai,
 // taake baad mein product badle ya delete ho to purana order wahi rahe
 const orderItemSchema = new mongoose.Schema(
   {
-    product: { type: mongoose.Schema.Types.ObjectId, ref: "Product", required: true },
+    product: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Product",
+      required: true,
+    },
     title: { type: String, required: true },
     price: { type: Number, required: true, min: 0 },
     img: { type: String, default: "" },
+    originalPrice: { type: Number, min: 0 }, // sale se pehle ki price (record ke liye)
     size: { type: String, default: "" },
     qty: { type: Number, required: true, min: 1 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const orderSchema = new mongoose.Schema(
   {
-    user: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true, index: true },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
     items: { type: [orderItemSchema], validate: (v) => v.length > 0 },
     shipping: {
       fullName: { type: String, required: true },
@@ -30,10 +46,17 @@ const orderSchema = new mongoose.Schema(
     paymentMethod: { type: String, enum: ["COD"], default: "COD" },
     subtotal: { type: Number, required: true, min: 0 },
     shippingFee: { type: Number, required: true, min: 0 },
+    couponCode: { type: String, default: "" },
+    couponDiscount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
-    status: { type: String, enum: ORDER_STATUSES, default: "pending", index: true },
+    status: {
+      type: String,
+      enum: ORDER_STATUSES,
+      default: "pending",
+      index: true,
+    },
   },
-  { timestamps: true }
+  { timestamps: true },
 );
 
 export default mongoose.model("Order", orderSchema);
